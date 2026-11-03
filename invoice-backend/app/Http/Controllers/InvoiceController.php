@@ -143,28 +143,33 @@ class InvoiceController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki akses ke invoice ini.'], 403);
         }
 
-        $data = $request->validate([
-            'email' => 'required|email',
-            'pdf' => 'required|file|mimes:pdf|max:10240',
-        ]);
-
         try {
+            $data = $request->validate([
+                'email' => 'required|email',
+                'pdf' => 'required|file|mimes:pdf|max:10240',
+            ]);
+
+            Log::info('Mulai proses kirim email invoice', ['invoice_id' => $invoice->id, 'email' => $data['email']]);
+
             $invoice->load('items');
             $pdfData = file_get_contents($request->file('pdf')->getRealPath());
 
             $renderer = app(\App\Services\InvoiceEmailTemplateRenderer::class);
             $previewImageBase64 = $renderer->renderImage($invoice);
 
+            Log::info('Preview image berhasil dirender', ['invoice_id' => $invoice->id]);
+
             Mail::to($data['email'])->send(
                 new InvoiceMail($invoice, $pdfData, $previewImageBase64)
             );
+
+            Log::info('Email berhasil dikirim', ['invoice_id' => $invoice->id, 'email' => $data['email']]);
 
             return response()->json(['message' => 'Invoice berhasil dikirim ke email.']);
 
         } catch (\Throwable $e) {
             Log::error('Gagal kirim email invoice', [
-                'invoice_id' => $invoice->id,
-                'email' => $data['email'],
+                'invoice_id' => $invoice->id ?? null,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

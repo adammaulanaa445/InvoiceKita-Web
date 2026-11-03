@@ -29,16 +29,22 @@ class InvoiceEmailTemplateRenderer
                 ])
                 ->waitUntilNetworkIdle()
                 ->waitForFunction('document.querySelector(".print-wrapper") && !document.querySelector(".print-pending")')
-                ->setDelay(1500) // Delay lebih lama untuk memastikan semua asset ter-load
+                ->setDelay(1500)
                 ->windowSize(900, 1200)
-                ->setOption('timeout', 30000); // 30 detik timeout
+                ->setOption('timeout', 30000);
 
             $chromePath = config('services.browsershot.chrome_path');
             if ($chromePath) {
                 $browsershot->setChromePath($chromePath);
             }
 
-            $base64 = $browsershot->toBase64('png');
+            // Gunakan screenshot lalu base64_encode untuk memastikan tipe data string
+            $pngData = $browsershot->screenshot();
+            $base64 = base64_encode($pngData);
+
+            if (!is_string($base64)) {
+                throw new \RuntimeException('Gagal mengencode screenshot ke base64');
+            }
 
             Log::info('Invoice image rendered successfully', ['invoice_id' => $invoice->id, 'base64_length' => strlen($base64)]);
 

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Mail\InvoiceMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class InvoiceController extends Controller
 {
@@ -54,8 +55,6 @@ class InvoiceController extends Controller
             ...$data,
             'user_id' => $request->user()->id,
             'invoice_number' => 'INV-' . strtoupper(Str::random(6)),
-            // Token acak untuk halaman cetak publik (dipakai Browsershot saat
-            // mengirim invoice terjadwal). Tidak ditampilkan ke user biasa.
             'print_token' => Str::random(40),
         ]);
 
@@ -80,10 +79,8 @@ class InvoiceController extends Controller
     }
 
     // PUT /api/invoices/{invoice}
-    public function update(
-        Request $request,
-        Invoice $invoice
-    ) {
+    public function update(Request $request, Invoice $invoice)
+    {
         if ($invoice->user_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Anda tidak memiliki akses ke invoice ini.'
@@ -126,10 +123,8 @@ class InvoiceController extends Controller
     }
 
     // DELETE /api/invoices/{invoice}
-    public function destroy(
-        Request $request,
-        Invoice $invoice
-    ) {
+    public function destroy(Request $request, Invoice $invoice)
+    {
         if ($invoice->user_id !== $request->user()->id) {
             return response()->json([
                 'message' => 'Anda tidak memiliki akses ke invoice ini.'
@@ -144,11 +139,8 @@ class InvoiceController extends Controller
     // POST /api/invoices/{invoice}/send-email
     public function sendEmail(Request $request, Invoice $invoice)
     {
-        // Pastikan invoice milik user yang sedang login
         if ($invoice->user_id !== $request->user()->id) {
-            return response()->json([
-                'message' => 'Anda tidak memiliki akses ke invoice ini.'
-            ], 403);
+            return response()->json(['message' => 'Anda tidak memiliki akses ke invoice ini.'], 403);
         }
 
         $data = $request->validate([
@@ -160,7 +152,6 @@ class InvoiceController extends Controller
             $invoice->load('items');
             $pdfData = file_get_contents($request->file('pdf')->getRealPath());
 
-            // Generate gambar preview di backend agar desain 100% sama dengan PDF
             $renderer = app(\App\Services\InvoiceEmailTemplateRenderer::class);
             $previewImageBase64 = $renderer->renderImage($invoice);
 
@@ -168,15 +159,14 @@ class InvoiceController extends Controller
                 new InvoiceMail($invoice, $pdfData, $previewImageBase64)
             );
 
-            return response()->json([
-                'message' => 'Invoice berhasil dikirim ke email.'
-            ]);
+            return response()->json(['message' => 'Invoice berhasil dikirim ke email.']);
 
         } catch (\Throwable $e) {
-            \Log::error('Gagal mengirim invoice email', [
+            Log::error('Gagal kirim email invoice', [
                 'invoice_id' => $invoice->id,
                 'email' => $data['email'],
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([

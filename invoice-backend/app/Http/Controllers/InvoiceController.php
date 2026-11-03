@@ -142,10 +142,8 @@ class InvoiceController extends Controller
     }
 
     // POST /api/invoices/{invoice}/send-email
-    public function sendEmail(
-        Request $request,
-        Invoice $invoice
-    ) {
+    public function sendEmail(Request $request, Invoice $invoice)
+    {
         // Pastikan invoice milik user yang sedang login
         if ($invoice->user_id !== $request->user()->id) {
             return response()->json([
@@ -153,34 +151,21 @@ class InvoiceController extends Controller
             ], 403);
         }
 
-        // Preview email dirender sebagai HTML dari data invoice. Hanya PDF perlu diunggah.
-        // CATATAN: backend production (Railway) versi lebih baru WAJIB menerima
-        // field `preview_html` dari frontend dan menjawab 422
-        // "HTML preview invoice tidak valid." kalau field ini kosong.
-        // Supaya kode lokal tetap kompatibel, field ini kita terima sbg opsional:
-        // kalau ada -> dipakai sebagai isi email, kalau tidak ada -> fallback
-        // ke template Blade bawaan (tidak error).
         $data = $request->validate([
             'email' => 'required|email',
-            'preview_html' => 'nullable|string|min:100',
             'pdf' => 'required|file|mimes:pdf|max:10240',
         ]);
 
         try {
-            // Load invoice beserta item
             $invoice->load('items');
+            $pdfData = file_get_contents($request->file('pdf')->getRealPath());
 
-            // Ambil isi file PDF
-            $pdfData = file_get_contents(
-                $request->file('pdf')->getRealPath()
-            );
+            // Generate gambar preview di backend agar desain 100% sama dengan PDF
+            $renderer = app(\App\Services\InvoiceEmailTemplateRenderer::class);
+            $previewImageBase64 = $renderer->renderImage($invoice);
 
-            $previewHtml = trim((string) ($data['preview_html'] ?? ''));
-
-            // Kirim email dengan preview HTML berbasis data invoice dari frontend.
-            // Frontend sudah generate hasil preview-nya sesuai template yang dipilih.
             Mail::to($data['email'])->send(
-                new InvoiceMail($invoice, $pdfData, $previewHtml ?: null)
+                new InvoiceMail($invoice, $pdfData, $previewImageBase64)
             );
 
             return response()->json([
@@ -188,7 +173,6 @@ class InvoiceController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-
             \Log::error('Gagal mengirim invoice email', [
                 'invoice_id' => $invoice->id,
                 'email' => $data['email'],

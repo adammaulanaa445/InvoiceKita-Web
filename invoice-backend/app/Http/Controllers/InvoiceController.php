@@ -177,7 +177,8 @@ class InvoiceController extends Controller
 
             $previewHtml = trim((string) ($data['preview_html'] ?? ''));
 
-            // Kirim email dengan preview HTML berbasis data invoice.
+            // Kirim email dengan preview HTML berbasis data invoice dari frontend.
+            // Frontend sudah generate hasil preview-nya sesuai template yang dipilih.
             Mail::to($data['email'])->send(
                 new InvoiceMail($invoice, $pdfData, $previewHtml ?: null)
             );

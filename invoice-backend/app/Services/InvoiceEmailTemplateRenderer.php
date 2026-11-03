@@ -7,6 +7,10 @@ use Spatie\Browsershot\Browsershot;
 
 class InvoiceEmailTemplateRenderer
 {
+    /**
+     * Render preview HTML untuk email.
+     * Mengembalikan body content HTML yang sudah diproses (tanpa DOCTYPE/html/body tags).
+     */
     public function render(Invoice $invoice): string
     {
         $frontendUrl = rtrim((string) config('services.frontend.url'), '/');
@@ -42,13 +46,54 @@ class InvoiceEmailTemplateRenderer
             $html = $html[0] ?? '';
         }
 
+        // Extract body content if full HTML document
+        if (preg_match('/<body[^>]*>(.*?)<\/body>/is', $html, $matches)) {
+            return $matches[1];
+        }
+
         return $html;
+    }
+
+    /**
+     * Generate image preview of invoice as base64 PNG.
+     * Returns base64 encoded image data URI (without data:image/png;base64, prefix).
+     */
+    public function renderImage(Invoice $invoice, int $width = null): string
+    {
+        $frontendUrl = rtrim((string) config('services.frontend.url'), '/');
+
+        if ($frontendUrl === '' || !filter_var($frontendUrl, FILTER_VALIDATE_URL)) {
+            throw new \RuntimeException('FRONTEND_URL harus berupa URL absolut yang valid.');
+        }
+
+        $printUrl = "{$frontendUrl}/print/invoice/{$invoice->id}?token=" . rawurlencode($invoice->print_token);
+        $browser = Browsershot::url($printUrl)
+            ->addChromiumArguments([
+                'no-sandbox',
+                'disable-setuid-sandbox',
+            ])
+            ->waitUntilNetworkIdle()
+            ->waitForFunction('document.querySelector(".print-wrapper") && !document.querySelector(".print-pending")')
+            ->setDelay(500);
+
+        $chromePath = config('services.browsershot.chrome_path');
+        if ($chromePath) {
+            $browser->setChromePath($chromePath);
+        }
+
+        // Set output width for email-friendly image
+        if ($width) {
+            $browser->viewPort($width, 800); // Height auto-calculated
+        }
+
+        // Return as base64 PNG
+        return $browser->toBase64('png');
     }
 
     /**
      * JavaScript yang inline semua computed style dari setiap element.
      * Hasil: HTML email-safe dengan inline style persis seperti render Svelte.
-     * 
+     *
      * Filter property yang relevan untuk email (skip animation, transition, dll)
      * untuk kurangi size HTML.
      */
@@ -57,7 +102,7 @@ class InvoiceEmailTemplateRenderer
         return <<<'JAVASCRIPT'
 (() => {
   const relevantProps = new Set([
-    'color', 'background', 'background-color', 'background-image', 
+    'color', 'background', 'background-color', 'background-image',
     'background-position', 'background-size', 'background-repeat',
     'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
     'border-width', 'border-style', 'border-color', 'border-radius',
@@ -75,14 +120,14 @@ class InvoiceEmailTemplateRenderer
   function inlineElement(el) {
     const computed = window.getComputedStyle(el);
     const styles = [];
-    
+
     for (const prop of relevantProps) {
       const value = computed.getPropertyValue(prop);
       if (value && value !== 'none' && value !== 'normal' && value !== 'auto') {
         styles.push(`${prop}:${value}`);
       }
     }
-    
+
     if (styles.length > 0) {
       el.setAttribute('style', styles.join(';'));
     }
@@ -96,12 +141,12 @@ class InvoiceEmailTemplateRenderer
     inlineElement(wrapper);
   }
 
-  // Hapus script, link stylesheet, style tag
+  // Remove script, link stylesheet, style tag
   document.querySelectorAll('script').forEach(s => s.remove());
   document.querySelectorAll('link[rel="stylesheet"]').forEach(l => l.remove());
   document.querySelectorAll('style').forEach(s => s.remove());
-  
-  // Tambah style minimal untuk email client compatibility
+
+  // Add minimal style for email client compatibility
   const head = document.querySelector('head');
   if (head) {
     const emailStyle = document.createElement('style');

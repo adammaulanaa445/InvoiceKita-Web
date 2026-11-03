@@ -43,10 +43,24 @@ class SendScheduledInvoiceEmail implements ShouldQueue
                 $scheduled->pdf_path
             );
 
+            // Generate preview image as base64
+            $previewImageBase64 = '';
+            try {
+                $previewImageBase64 = app(\App\Services\InvoiceEmailTemplateRenderer::class)->renderImage($scheduled->invoice);
+            } catch (\Throwable $e) {
+                \Log::warning('Gagal generate preview image untuk scheduled invoice', [
+                    'scheduled_email_id' => $scheduled->id,
+                    'invoice_id' => $scheduled->invoice_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // Send email with preview image (base64) or null if generation failed
             Mail::to($scheduled->recipient_email)->send(
                 new InvoiceMail(
                     $scheduled->invoice,
-                    $pdfData
+                    $pdfData,
+                    $previewImageBase64 ?: null
                 )
             );
 

@@ -9,7 +9,6 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Services\InvoiceEmailTemplateRenderer;
 
 class InvoiceMail extends Mailable
 {
@@ -18,7 +17,7 @@ class InvoiceMail extends Mailable
     public function __construct(
         public Invoice $invoice,
         public string $pdfData,
-        public ?string $previewHtml = null,
+        public ?string $previewData = null, // Bisa berupa HTML preview atau base64 image
     ) {}
 
     public function envelope(): Envelope
@@ -30,32 +29,53 @@ class InvoiceMail extends Mailable
 
     public function content(): Content
     {
-        $previewHtml = trim((string) $this->previewHtml);
+        $previewData = trim((string) $this->previewData);
 
-        // Kalau frontend mengirim preview HTML (hasil render template
-        // yang persis dilihat user), pakai Blade template dengan previewHtml
-        if ($previewHtml !== '' && strlen($previewHtml) >= 100) {
-            \Log::info('Using frontend preview HTML with Blade template', [
+        // Kalau preview data ada dan cukup panjang
+        if ($previewData !== '' && strlen($previewData) > 100) {
+            \Log::info('Using preview data with Blade template', [
                 'invoice_id' => $this->invoice->id,
-                'html_length' => strlen($previewHtml),
+                'preview_length' => strlen($previewData),
             ]);
+
+            // Deteksi apakah previewData adalah base64 image atau HTML
+            $isImage = $this->isBase64Image($previewData);
+
+            if ($isImage) {
+                return new Content(
+                    view: 'emails.invoice',
+                    with: [
+                        'invoice' => $this->invoice->load('items'),
+                        'previewImageBase64' => $previewData,
+                    ],
+                );
+            }
+
             return new Content(
                 view: 'emails.invoice',
                 with: [
                     'invoice' => $this->invoice->load('items'),
-                    'previewHtml' => $this->wrapPreviewHtml($previewHtml),
+                    'previewHtml' => $previewData,
                 ],
             );
         }
 
-        // Fallback: render dari Blade template email bawaan
-        \Log::info('Using Blade email template fallback', [
+        // Fallback: render dari Blade template email bawaan tanpa preview
+        \Log::info('Using Blade email template fallback (no preview)', [
             'invoice_id' => $this->invoice->id,
         ]);
         return new Content(
             view: 'emails.invoice',
             with: ['invoice' => $this->invoice->load('items')],
         );
+    }
+
+    /**
+     * Check if the preview data is a base64 image (starts with data:image/)
+     */
+    protected function isBase64Image(string $data): bool
+    {
+        return strpos($data, 'data:image/') === 0;
     }
 
     public function attachments(): array
@@ -79,7 +99,7 @@ class InvoiceMail extends Mailable
      * 2. Pastikan CSS anti-link Gmail (color:inherit) sudah ada.
      * 3. Sisipkan &zwnj; di tengah pola email agar tidak jadi link biru.
      */
-    protected function wrapPreviewHtml(string $html): string
+    public function wrapPreviewHtml(string $html): string
     {
         // Anti-XSS: buang script dan event handler.
         // JANGAN buang <style> — CSS anti-link Gmail ada di sana.

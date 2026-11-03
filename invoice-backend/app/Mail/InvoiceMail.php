@@ -33,15 +33,18 @@ class InvoiceMail extends Mailable
         $previewHtml = trim((string) $this->previewHtml);
 
         // Kalau frontend mengirim preview HTML (hasil render template
-        // yang persis dilihat user), pakai itu sebagai isi email supaya
-        // tampilannya sama dengan preview di editor.
+        // yang persis dilihat user), pakai Blade template dengan previewHtml
         if ($previewHtml !== '' && strlen($previewHtml) >= 100) {
-            \Log::info('Using frontend preview HTML', [
+            \Log::info('Using frontend preview HTML with Blade template', [
                 'invoice_id' => $this->invoice->id,
                 'html_length' => strlen($previewHtml),
             ]);
             return new Content(
-                htmlString: $this->wrapPreviewHtml($previewHtml),
+                view: 'emails.invoice',
+                with: [
+                    'invoice' => $this->invoice->load('items'),
+                    'previewHtml' => $this->wrapPreviewHtml($previewHtml),
+                ],
             );
         }
 
@@ -99,8 +102,10 @@ class InvoiceMail extends Mailable
             'clean_length' => strlen($clean),
         ]);
 
-        // Dokumen HTML lengkap dari frontend → pakai langsung.
-        if (preg_match('/<html[\s>]/i', $clean) === 1) {
+        // Ekstrak <body> content jika ada HTML lengkap
+        if (preg_match('/<html[\s>]/i', $clean) === 1 && preg_match('/<body[^>]*>(.*?)<\/body>/is', $clean, $matches)) {
+            $bodyContent = $matches[1];
+
             // Pastikan CSS anti-link Gmail sudah ada.
             $antiLinkCss = 'body,div,p,td,th,span{color:inherit!important}'
                 . 'a,a:visited,a:hover,a:active{color:inherit!important;text-decoration:none!important}'
@@ -125,30 +130,10 @@ class InvoiceMail extends Mailable
                 }
             }
 
-            return $clean;
+            return $bodyContent;
         }
 
-        // Fallback: HTML belum lengkap → bungkus dengan template minimal.
-        $invoiceNumber = e($this->invoice->invoice_number ?? '');
-        $antiLinkCss = 'body,div,p,td,th,span{color:inherit!important}'
-            . 'img{max-width:100%!important;height:auto!important;display:block}'
-            . 'table{border-collapse:collapse!important}'
-            . 'a,a:visited,a:hover,a:active{color:inherit!important;text-decoration:none!important}';
-
-        return <<<HTML
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="color-scheme" content="light">
-<title>Invoice {$invoiceNumber}</title>
-<style>{$antiLinkCss}</style>
-</head>
-<body id="body" class="gmail" style="margin:0;padding:24px 12px;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.5;">
-<div style="max-width:760px;margin:0 auto;background:#ffffff;">{$clean}</div>
-</body>
-</html>
-HTML;
+        // Fallback: HTML belum lengkap → kembalikan asalinannya
+        return $clean;
     }
 }

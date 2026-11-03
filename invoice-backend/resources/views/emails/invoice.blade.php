@@ -20,7 +20,6 @@
         <div style="font-size:15px;line-height:1.7;margin-bottom:24px;color:#334155;">
             <p style="margin:0 0 8px;">Halo {{ $invoice->to_name ?: 'Bapak/Ibu' }},</p>
             <p style="margin:0 0 8px;">Berikut invoice dari <strong>{{ $invoice->from_name ?: 'kami' }}</strong>.</p>
-            <p style="margin:0;color:#64748b;font-size:14px;">Preview lengkap tersedia di bawah. Teks invoice dapat disalin. PDF resmi tetap terlampir.</p>
         </div>
 
         <div style="margin:0 0 28px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#ffffff;">
@@ -101,9 +100,15 @@
             </div>
         </div>
 
+        @if(isset($previewHtml) && $previewHtml)
+            <div style="margin:0 0 24px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#ffffff;">
+                {!! $previewHtml !!}
+            </div>
+        @endif
+
         <div style="padding-top:20px;border-top:1px solid #e5e7eb;font-size:13px;line-height:1.6;color:#64748b;">
-            <strong style="color:#172033;">Invoice #{{ $invoice->invoice_number }}</strong><br>
-            PDF invoice resmi terlampir untuk disimpan atau dicetak.
+            <p style="margin:0 0 8px;"><strong style="color:#172033;">Invoice #{{ $invoice->invoice_number }}</strong></p>
+            <p style="margin:0;font-size:13px;color:#64748b;">PDF invoice resmi terlampir untuk disimpan atau dicetak.</p>
         </div>
     </div>
 </body>

@@ -17,7 +17,7 @@ class InvoiceMail extends Mailable
     public function __construct(
         public Invoice $invoice,
         public string $pdfData,
-        public string $previewImageBase64, // Harus berupa base64 string
+        public string $previewHtml = '',
     ) {}
 
     public function envelope(): Envelope
@@ -33,7 +33,7 @@ class InvoiceMail extends Mailable
             view: 'emails.invoice',
             with: [
                 'invoice' => $this->invoice->load('items'),
-                'previewImageBase64' => $this->previewImageBase64,
+                'preview_html' => $this->previewHtml,
             ],
         );
     }

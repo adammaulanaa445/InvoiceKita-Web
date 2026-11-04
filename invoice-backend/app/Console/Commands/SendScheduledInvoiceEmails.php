@@ -48,12 +48,8 @@ class SendScheduledInvoiceEmails extends Command
             $pdfPath = $this->generatePdf($invoice);
             $pdfData = file_get_contents($pdfPath);
 
-            // Generate preview image untuk scheduled email
-            // menggunakan base64 PNG untuk embed langsung di email
-            $previewImageBase64 = $this->generatePreviewImage($invoice);
-
             Mail::to($schedule->recipient_email)->send(
-                new InvoiceMail($invoice, $pdfData, $previewImageBase64 ?: null)
+                new InvoiceMail($invoice, $pdfData)
             );
 
             $schedule->update([
@@ -121,21 +117,6 @@ class SendScheduledInvoiceEmails extends Command
         $browsershot->save($fullPath);
 
         return $fullPath;
-    }
-
-    protected function generatePreviewImage($invoice): string
-    {
-        try {
-            return app(InvoiceEmailTemplateRenderer::class)->renderImage($invoice);
-        } catch (\Throwable $e) {
-            \Log::warning('Gagal generate preview image untuk scheduled email', [
-                'invoice_id' => $invoice->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            // Fallback ke string kosong, InvoiceMail akan pakai Blade template tanpa preview
-            return '';
-        }
     }
 
     protected function calculateNextSendAt(ScheduledInvoiceEmail $schedule): Carbon

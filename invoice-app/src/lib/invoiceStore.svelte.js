@@ -295,8 +295,6 @@ export const invoiceStore = {
   async sendEmail(
     invoiceId,
     recipientEmail,
-    pdfBlob,
-    previewHtml = '',
   ) {
 
     const token = getToken();
@@ -307,42 +305,6 @@ export const invoiceStore = {
       );
     }
 
-
-    const cleanPreview = String(previewHtml ?? '').trim();
-
-    if (
-      !cleanPreview ||
-      cleanPreview.length < 100 ||
-      !/<(div|table|section|article)/i.test(cleanPreview)
-    ) {
-      throw new Error(
-        'HTML preview invoice tidak valid.'
-      );
-    }
-
-    const formData =
-      new FormData();
-
-
-    formData.append(
-      'email',
-      recipientEmail.trim()
-    );
-
-    // Backend production (Railway) memvalidasi field ini.
-    // Tanpa ini backend menjawab 422 "HTML preview invoice tidak valid."
-    formData.append(
-      'preview_html',
-      cleanPreview
-    );
-
-
-    formData.append(
-      'pdf',
-      pdfBlob,
-      `Invoice-${invoiceId}.pdf`
-    );
-
     const res = await fetch(
       `${API_BASE}/invoices/${invoiceId}/send-email`,
       {
@@ -350,17 +312,13 @@ export const invoiceStore = {
 
         headers: {
           'Authorization':
-            `Bearer ${token}`,
-
-          'Accept':
-            'application/json'
+            `Bearer ${token}`
         },
 
         body:
-          formData
+          JSON.stringify({ email: recipientEmail.trim() })
       }
     );
-
 
     console.log('[EMAIL DEBUG] Response status:', res.status, res.statusText);
     console.log('[EMAIL DEBUG] Response headers:', Object.fromEntries(res.headers.entries()));

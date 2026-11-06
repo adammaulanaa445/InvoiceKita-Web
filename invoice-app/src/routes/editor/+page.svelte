@@ -813,38 +813,12 @@
         return;
       }
 
-      // KIRIM LANGSUNG SEKARANG (PDF + preview HTML dibuat di browser)
-      const pdf = await generatePDF();
-
-      const pdfBlob = pdf.output("blob");
-
-      if (!previewEl) {
-        throw new Error("Preview invoice tidak ditemukan.");
-      }
-
-      // Ambil HTML preview DENGAN DESAIN ASLI (inline computed style).
-      // Ini bukan outerHTML mentah (yang cuma class Tailwind tanpa CSS),
-      // melainkan hasil render asli: warna/font/spacing sudah jadi
-      // inline style rgb/px sehingga tampil di Gmail/Outlook.
-      // Backend production memvalidasi field `preview_html` ini —
-      // kalau kosong / terlalu pendek backend menjawab 422
-      // "HTML preview invoice tidak valid."
-      await tick();
-      const previewHtml = buildEmailPreviewHtml(previewEl, {
-        invoiceNumber: invoice.invoiceNumber,
-        fromName: invoice.from.name,
-        toName: invoice.to.name,
-      });
-
-      console.log('[EMAIL DEBUG] Preview HTML size:', previewHtml.length, 'bytes');
-      console.log('[EMAIL DEBUG] Preview HTML preview:', previewHtml.slice(0, 500));
-
+      // KIRIM LANGSUNG SEKARANG (gambar invoice dibuat di server dari print page)
       await invoiceStore.sendEmail(
         savedInvoiceId,
         recipientEmail,
-        pdfBlob,
-        previewHtml,
       );
+
 
       showEmailModal = false;
       await notify.success("Invoice dikirim", "Email invoice sudah dikirim ke penerima.");

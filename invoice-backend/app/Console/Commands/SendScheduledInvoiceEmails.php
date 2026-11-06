@@ -45,11 +45,10 @@ class SendScheduledInvoiceEmails extends Command
         }
 
         try {
-            $pdfPath = $this->generatePdf($invoice);
-            $pdfData = file_get_contents($pdfPath);
+            $imageBase64 = (new InvoiceEmailTemplateRenderer())->renderImage($invoice);
 
             Mail::to($schedule->recipient_email)->send(
-                new InvoiceMail($invoice, $pdfData)
+                new InvoiceMail($invoice, $imageBase64)
             );
 
             $schedule->update([
@@ -77,46 +76,9 @@ class SendScheduledInvoiceEmails extends Command
         }
     }
 
-    protected function generatePdf($invoice): string
+    protected function renderInvoiceImage($invoice): string
     {
-        $frontendUrl = rtrim((string) config('services.frontend.url'), '/');
-
-        if ($frontendUrl === '' || !filter_var($frontendUrl, FILTER_VALIDATE_URL)) {
-            throw new \RuntimeException('FRONTEND_URL harus berupa URL absolut yang valid.');
-        }
-
-        $printUrl = "{$frontendUrl}/print/invoice/{$invoice->id}?token=" . rawurlencode($invoice->print_token);
-
-        $fileName = "scheduled-invoices/invoice-{$invoice->id}-" . now()->timestamp . '.pdf';
-        $fullPath = storage_path("app/public/{$fileName}");
-
-        if (!is_dir(dirname($fullPath))) {
-            mkdir(dirname($fullPath), 0755, true);
-        }
-
-        $browsershot = Browsershot::url($printUrl)
-            ->addChromiumArguments([
-                'no-sandbox',
-                'disable-setuid-sandbox',
-            ])
-            ->waitUntilNetworkIdle()
-            // Tunggu sampai Svelte selesai render komponen template.
-            // waitUntilNetworkIdle() saja tidak cukup karena Svelte butuh
-            // beberapa saat untuk mount komponen setelah fetch data selesai.
-            ->waitForFunction('document.querySelector(".print-wrapper") && !document.querySelector(".print-pending")')
-            ->setDelay(500) // buffer tambahan 500ms agar CSS/font selesai dimuat
-            ->format('A4')
-            ->showBackground();
-
-        $chromePath = config('services.browsershot.chrome_path');
-
-        if ($chromePath) {
-            $browsershot->setChromePath($chromePath);
-        }
-
-        $browsershot->save($fullPath);
-
-        return $fullPath;
+        return (new InvoiceEmailTemplateRenderer())->renderImage($invoice);
     }
 
     protected function calculateNextSendAt(ScheduledInvoiceEmail $schedule): Carbon

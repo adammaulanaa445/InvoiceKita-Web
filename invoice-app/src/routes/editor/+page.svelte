@@ -694,6 +694,30 @@
     return pdf;
   }
 
+  async function generateImage() {
+    if (!previewEl) {
+      throw new Error("Preview invoice tidak ditemukan.");
+    }
+
+    // PDF must always be light regardless of app dark mode
+    previewEl.classList.add("pdf-export");
+    let canvas;
+    try {
+      canvas = await html2canvas(previewEl, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: "#ffffff",
+      });
+    } finally {
+      previewEl.classList.remove("pdf-export");
+    }
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    });
+  }
+
   // =====================================================
   // DOWNLOAD PDF
   // =====================================================
@@ -813,10 +837,15 @@
         return;
       }
 
-      // KIRIM LANGSUNG SEKARANG (gambar invoice dibuat di server dari print page)
+      // KIRIM LANGSUNG SEKARANG (PDF + gambar PNG dibuat di browser)
+      const pdf = await generatePDF();
+      const pdfBlob = pdf.output("blob");
+      const pngBlob = await generateImage();
       await invoiceStore.sendEmail(
         savedInvoiceId,
         recipientEmail,
+        pdfBlob,
+        pngBlob,
       );
 
 

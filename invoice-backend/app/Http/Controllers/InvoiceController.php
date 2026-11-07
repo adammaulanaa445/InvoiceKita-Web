@@ -146,15 +146,19 @@ class InvoiceController extends Controller
         try {
             $data = $request->validate([
                 'email' => 'required|email',
+                'pdf' => 'required|file|mimes:pdf|max:10240',
+                'image' => 'required|file|mimes:png,jpg,jpeg|max:10240',
             ]);
 
             Log::info('Mulai proses kirim email invoice', ['invoice_id' => $invoice->id, 'email' => $data['email']]);
 
             $invoice->load('items');
-            $imageBase64 = (new InvoiceEmailTemplateRenderer())->renderImage($invoice);
+
+            $pdfData = file_get_contents($request->file('pdf')->getRealPath());
+            $imageBase64 = base64_encode(file_get_contents($request->file('image')->getRealPath()));
 
             Mail::to($data['email'])->send(
-                new InvoiceMail($invoice, $imageBase64)
+                new InvoiceMail($invoice, $pdfData, $imageBase64)
             );
 
             Log::info('Email berhasil dikirim', ['invoice_id' => $invoice->id, 'email' => $data['email']]);

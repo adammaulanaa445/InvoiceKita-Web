@@ -27,27 +27,15 @@ class SendScheduledInvoiceEmail implements ShouldQueue
         $scheduled->load('invoice.items');
 
         try {
-            if (!$scheduled->pdf_path) {
-                throw new \Exception(
-                    'File PDF invoice tidak ditemukan.'
-                );
-            }
+            $imageBase64 = (new InvoiceEmailTemplateRenderer())->renderImage($scheduled->invoice);
 
-            if (!Storage::exists($scheduled->pdf_path)) {
-                throw new \Exception(
-                    'File PDF invoice tidak tersedia di storage.'
-                );
-            }
-
-            $pdfData = Storage::get(
-                $scheduled->pdf_path
-            );
-
-            // Send email with preview HTML (text info) and PDF attachment
+            // Send email with preview HTML and PDF attachment
+            // PDFS: ini file dari lanngkungan, imageBase64 di generate client-side
             Mail::to($scheduled->recipient_email)->send(
                 new InvoiceMail(
                     $scheduled->invoice,
-                    $pdfData
+                    null,
+                    $imageBase64
                 )
             );
 

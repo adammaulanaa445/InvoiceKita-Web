@@ -16,7 +16,8 @@ class InvoiceMail extends Mailable
 
     public function __construct(
         public Invoice $invoice,
-        public string $imageBase64,
+        public ?string $pdfData = null,
+        public ?string $imageBase64 = null,
     ) {}
 
     public function envelope(): Envelope
@@ -29,7 +30,11 @@ class InvoiceMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            text: $this->buildTextBody(),
+            view: 'emails.invoice-mail',
+            with: [
+                'invoice' => $this->invoice,
+                'previewImageBase64' => $this->imageBase64,
+            ],
         );
     }
 
@@ -37,9 +42,9 @@ class InvoiceMail extends Mailable
     {
         return [
             Attachment::fromData(
-                fn () => base64_decode($this->imageBase64, true),
-                'Invoice-' . $this->invoice->invoice_number . '.png'
-            )->withMime('image/png'),
+                fn () => $this->pdfData,
+                'Invoice-' . $this->invoice->invoice_number . '.pdf'
+            )->withMime('application/pdf'),
         ];
     }
 

@@ -295,6 +295,8 @@ export const invoiceStore = {
   async sendEmail(
     invoiceId,
     recipientEmail,
+    pdfBlob,
+    imageBlob,
   ) {
 
     const token = getToken();
@@ -304,6 +306,26 @@ export const invoiceStore = {
         'Kamu harus login terlebih dahulu.'
       );
     }
+
+    const formData =
+      new FormData();
+
+    formData.append(
+      'email',
+      recipientEmail.trim()
+    );
+
+    formData.append(
+      'pdf',
+      pdfBlob,
+      `Invoice-${invoiceId}.pdf`
+    );
+
+    formData.append(
+      'image',
+      imageBlob,
+      `Invoice-${invoiceId}.png`
+    );
 
     const res = await fetch(
       `${API_BASE}/invoices/${invoiceId}/send-email`,
@@ -316,7 +338,7 @@ export const invoiceStore = {
         },
 
         body:
-          JSON.stringify({ email: recipientEmail.trim() })
+          formData
       }
     );
 

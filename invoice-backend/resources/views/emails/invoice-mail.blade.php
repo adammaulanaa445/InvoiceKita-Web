@@ -2,8 +2,9 @@
 <body style="margin:0;padding:20px;font-family:Arial,sans-serif;color:#334155;">
 
     <p style="margin:0 0 16px;font-size:16px;font-weight:bold;">Halo {{ $invoice->to_name }},</p>
+    <p style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#334155;">Selamat datang di {{ $invoice->from_name }}.</p>
     <p style="margin:0 0 24px;font-size:16px;">
-        Selamat datang di <strong>{{ $invoice->from_name }}</strong>. Berikut adalah detail invoice untuk {{ $invoice->to_name }} (No: #{{ $invoice->invoice_number }}).
+        Berikut adalah rincian invoice untuk {{ $invoice->to_name }} (No: #{{ $invoice->invoice_number }}). Anda memiliki tagihan yang harus segera dilunasi.
     </p>
 
     <p style="margin:0 0 24px;font-size:14px;color:#64748b;">
@@ -14,8 +15,6 @@
         <br/>
         Total: Rp{{ number_format($invoice->total, 2, '.', ',') }}
     </p>
-
-    </div>
 
     <p style="margin:0 0 24px;font-size:14px;color:#64748b;">
         <strong style="color:#334155;">Informasi Tagihan:</strong><br/>
@@ -44,6 +43,12 @@
         Bank: {{ $invoice->payment_link ?? 'Cash on Delivery' }}<br/>
         <span style="color:#94a3b8;font-size:12px;">Silahkan transfer ke rekening di atas dan konfirmasi lewat email.</span>
     </p>
+
+    @if($previewImageBase64)
+    <div style="margin:0 0 24px;">
+        <img src="data:{{ $previewImageMimeType }};base64,{{ $previewImageBase64 }}" alt="" style="max-width:100%;height:auto;border:0;" />
+    </div>
+    @endif
 
     @if($invoice->notes)
     <p style="margin:0 0 24px;font-size:14px;color:#64748b;">

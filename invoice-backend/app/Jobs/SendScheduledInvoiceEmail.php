@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\InvoiceMail;
 use App\Models\ScheduledInvoiceEmail;
+use App\Services\InvoiceEmailTemplateRenderer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Mail\InvoiceMail;
 use App\Models\ScheduledInvoiceEmail;
+use App\Services\InvoiceEmailTemplateRenderer;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;

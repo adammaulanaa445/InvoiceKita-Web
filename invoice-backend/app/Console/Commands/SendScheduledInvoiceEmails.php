@@ -48,7 +48,7 @@ class SendScheduledInvoiceEmails extends Command
             $imageBase64 = (new InvoiceEmailTemplateRenderer())->renderImage($invoice);
 
             Mail::to($schedule->recipient_email)->send(
-                new InvoiceMail($invoice, null, $imageBase64)
+                new InvoiceMail($invoice, null, $imageBase64, 'image/png')
             );
 
             $schedule->update([

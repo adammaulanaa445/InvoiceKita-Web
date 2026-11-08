@@ -156,9 +156,10 @@ class InvoiceController extends Controller
 
             $pdfData = file_get_contents($request->file('pdf')->getRealPath());
             $imageBase64 = base64_encode(file_get_contents($request->file('image')->getRealPath()));
+            $imageMimeType = $request->file('image')->getMimeType();
 
             Mail::to($data['email'])->send(
-                new InvoiceMail($invoice, $pdfData, $imageBase64)
+                new InvoiceMail($invoice, $pdfData, $imageBase64, $imageMimeType)
             );
 
             Log::info('Email berhasil dikirim', ['invoice_id' => $invoice->id, 'email' => $data['email']]);

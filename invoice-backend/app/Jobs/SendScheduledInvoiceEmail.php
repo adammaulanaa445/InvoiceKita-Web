@@ -30,12 +30,13 @@ class SendScheduledInvoiceEmail implements ShouldQueue
             $imageBase64 = (new InvoiceEmailTemplateRenderer())->renderImage($scheduled->invoice);
 
             // Send email with preview HTML and PDF attachment
-            // PDFS: ini file dari lanngkungan, imageBase64 di generate client-side
+            // Image is generated as PNG by InvoiceEmailTemplateRenderer
             Mail::to($scheduled->recipient_email)->send(
                 new InvoiceMail(
                     $scheduled->invoice,
                     null,
-                    $imageBase64
+                    $imageBase64,
+                    'image/png'
                 )
             );
 

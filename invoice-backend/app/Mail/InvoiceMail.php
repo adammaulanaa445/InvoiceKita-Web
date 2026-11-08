@@ -18,6 +18,7 @@ class InvoiceMail extends Mailable
         public Invoice $invoice,
         public ?string $pdfData = null,
         public ?string $imageBase64 = null,
+        public ?string $imageMimeType = 'image/png',
     ) {}
 
     public function envelope(): Envelope
@@ -34,6 +35,7 @@ class InvoiceMail extends Mailable
             with: [
                 'invoice' => $this->invoice,
                 'previewImageBase64' => $this->imageBase64,
+                'previewImageMimeType' => $this->imageMimeType,
             ],
         );
     }

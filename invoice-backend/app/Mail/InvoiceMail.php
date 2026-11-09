@@ -40,6 +40,10 @@ class InvoiceMail extends Mailable
 
     public function attachments(): array
     {
+        if ($this->pdfData === null) {
+            return [];
+        }
+
         return [
             Attachment::fromData(
                 fn () => $this->pdfData,

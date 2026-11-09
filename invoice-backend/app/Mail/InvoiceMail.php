@@ -35,7 +35,6 @@ class InvoiceMail extends Mailable
             with: [
                 'invoice' => $this->invoice,
             ],
-            text: $this->buildTextBody(),
         );
     }
 

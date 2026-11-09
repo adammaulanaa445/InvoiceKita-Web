@@ -4,14 +4,12 @@ namespace App\Jobs;
 
 use App\Mail\InvoiceMail;
 use App\Models\ScheduledInvoiceEmail;
-use App\Services\InvoiceEmailTemplateRenderer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 
 class SendScheduledInvoiceEmail implements ShouldQueue
 {
@@ -28,15 +26,13 @@ class SendScheduledInvoiceEmail implements ShouldQueue
         $scheduled->load('invoice.items');
 
         try {
-            $imageBase64 = (new InvoiceEmailTemplateRenderer())->renderImage($scheduled->invoice);
-
-            // Send email with preview HTML and PDF attachment
-            // Image is generated as PNG by InvoiceEmailTemplateRenderer
+            // Send email with HTML preview and PDF attachment
+            // Image is not included - user wants text and PDF only
             Mail::to($scheduled->recipient_email)->send(
                 new InvoiceMail(
                     $scheduled->invoice,
                     null,
-                    $imageBase64,
+                    null,
                     'image/png'
                 )
             );

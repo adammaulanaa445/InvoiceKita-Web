@@ -34,9 +34,8 @@ class InvoiceMail extends Mailable
             view: 'emails.invoice-mail',
             with: [
                 'invoice' => $this->invoice,
-                'previewImageBase64' => $this->imageBase64,
-                'previewImageMimeType' => $this->imageMimeType,
             ],
+            text: $this->buildTextBody(),
         );
     }
 

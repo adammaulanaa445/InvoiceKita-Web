@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Mail\InvoiceMail;
 use App\Models\ScheduledInvoiceEmail;
-use App\Services\InvoiceEmailTemplateRenderer;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
@@ -46,10 +45,8 @@ class SendScheduledInvoiceEmails extends Command
         }
 
         try {
-            $imageBase64 = (new InvoiceEmailTemplateRenderer())->renderImage($invoice);
-
             Mail::to($schedule->recipient_email)->send(
-                new InvoiceMail($invoice, null, $imageBase64, 'image/png')
+                new InvoiceMail($invoice, null, null, 'image/png')
             );
 
             $schedule->update([
@@ -75,11 +72,6 @@ class SendScheduledInvoiceEmails extends Command
 
             $this->error("Gagal mengirim invoice #{$invoice->id}: {$e->getMessage()}");
         }
-    }
-
-    protected function renderInvoiceImage($invoice): string
-    {
-        return (new InvoiceEmailTemplateRenderer())->renderImage($invoice);
     }
 
     protected function calculateNextSendAt(ScheduledInvoiceEmail $schedule): Carbon

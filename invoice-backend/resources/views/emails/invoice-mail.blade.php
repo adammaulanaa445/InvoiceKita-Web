@@ -44,12 +44,6 @@
         <span style="color:#94a3b8;font-size:12px;">Silahkan transfer ke rekening di atas dan konfirmasi lewat email.</span>
     </p>
 
-    @if($previewImageBase64)
-    <div style="margin:0 0 24px;">
-        <img src="data:{{ $previewImageMimeType }};base64,{{ $previewImageBase64 }}" alt="" style="max-width:100%;height:auto;border:0;" />
-    </div>
-    @endif
-
     @if($invoice->notes)
     <p style="margin:0 0 24px;font-size:14px;color:#64748b;">
         <strong style="color:#334155;">Catatan:</strong><br/>

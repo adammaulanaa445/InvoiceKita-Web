@@ -37,7 +37,6 @@ class InvoiceMail extends Mailable
                 'previewImageBase64' => $this->imageBase64,
                 'previewImageMimeType' => $this->imageMimeType,
             ],
-            text: $this->buildTextBody(),
         );
     }
 

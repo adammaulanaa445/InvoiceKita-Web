@@ -45,8 +45,19 @@ class SendScheduledInvoiceEmails extends Command
         }
 
         try {
+            // Generate PDF from print URL
+            $frontendUrl = rtrim((string) config('services.frontend.url'), '/');
+            $printUrl = "{$frontendUrl}/print/invoice/{$invoice->id}?token=" . rawurlencode($invoice->print_token);
+
+            $pdfData = Browsershot::url($printUrl)
+                ->addChromiumArguments(['no-sandbox', 'disable-setuid-sandbox', 'disable-dev-shm-usage', 'single-process'])
+                ->waitUntilNetworkIdle()
+                ->setDelay(1500)
+                ->format('A4')
+                ->pdf();
+
             Mail::to($schedule->recipient_email)->send(
-                new InvoiceMail($invoice, null, null, 'image/png')
+                new InvoiceMail($invoice, $pdfData, null, 'image/png')
             );
 
             $schedule->update([

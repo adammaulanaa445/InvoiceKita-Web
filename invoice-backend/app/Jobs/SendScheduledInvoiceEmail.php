@@ -26,12 +26,23 @@ class SendScheduledInvoiceEmail implements ShouldQueue
         $scheduled->load('invoice.items');
 
         try {
+            // Generate PDF from print URL
+            $frontendUrl = rtrim((string) config('services.frontend.url'), '/');
+            $printUrl = "{$frontendUrl}/print/invoice/{$scheduled->invoice->id}?token=" . rawurlencode($scheduled->invoice->print_token);
+
+            $pdfData = \Spatie\Browsershot\Browsershot::url($printUrl)
+                ->addChromiumArguments(['no-sandbox', 'disable-setuid-sandbox', 'disable-dev-shm-usage', 'single-process'])
+                ->waitUntilNetworkIdle()
+                ->setDelay(1500)
+                ->format('A4')
+                ->pdf();
+
             // Send email with HTML preview and PDF attachment
             // Image is not included - user wants text and PDF only
             Mail::to($scheduled->recipient_email)->send(
                 new InvoiceMail(
                     $scheduled->invoice,
-                    null,
+                    $pdfData,
                     null,
                     'image/png'
                 )

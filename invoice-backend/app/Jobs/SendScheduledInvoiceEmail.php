@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Mail\InvoiceMail;
 use App\Models\ScheduledInvoiceEmail;
-use App\Services\ScreenshotToPdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,21 +26,19 @@ class SendScheduledInvoiceEmail implements ShouldQueue
         $scheduled->load('invoice.items');
 
         try {
-            // Generate screenshot (JPEG) from print URL - matches frontend html2canvas approach
+            // Generate PDF from print URL (emulate screen media to match frontend design)
             $frontendUrl = rtrim((string) config('services.frontend.url'), '/');
             $printUrl = "{$frontendUrl}/print/invoice/{$scheduled->invoice->id}?token=" . rawurlencode($scheduled->invoice->print_token);
 
-            $jpegData = \Spatie\Browsershot\Browsershot::url($printUrl)
+            $pdfData = \Spatie\Browsershot\Browsershot::url($printUrl)
                 ->addChromiumArguments(['no-sandbox', 'disable-setuid-sandbox', 'disable-dev-shm-usage', 'single-process'])
                 ->emulateMedia('screen')
                 ->showBackground()
-                ->windowSize(800, 1200)
+                ->margins(0, 0, 0, 0)
                 ->waitUntilNetworkIdle()
                 ->setDelay(1500)
-                ->screenshot('jpeg', 95);
-
-            // Convert screenshot to PDF (embeds image in A4 PDF, same as frontend jsPDF)
-            $pdfData = ScreenshotToPdf::convert($jpegData);
+                ->format('A4')
+                ->pdf();
 
             // Send email with HTML preview and PDF attachment
             // Image is not included - user wants text and PDF only

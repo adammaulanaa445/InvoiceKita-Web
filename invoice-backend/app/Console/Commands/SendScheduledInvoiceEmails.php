@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Mail\InvoiceMail;
 use App\Models\ScheduledInvoiceEmail;
-use App\Services\ScreenshotToPdf;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
@@ -46,21 +45,19 @@ class SendScheduledInvoiceEmails extends Command
         }
 
         try {
-            // Generate screenshot (JPEG) from print URL - matches frontend html2canvas approach
+            // Generate PDF from print URL (emulate screen media to match frontend design)
             $frontendUrl = rtrim((string) config('services.frontend.url'), '/');
             $printUrl = "{$frontendUrl}/print/invoice/{$invoice->id}?token=" . rawurlencode($invoice->print_token);
 
-            $jpegData = Browsershot::url($printUrl)
+            $pdfData = Browsershot::url($printUrl)
                 ->addChromiumArguments(['no-sandbox', 'disable-setuid-sandbox', 'disable-dev-shm-usage', 'single-process'])
                 ->emulateMedia('screen')
                 ->showBackground()
-                ->windowSize(800, 1200)
+                ->margins(0, 0, 0, 0)
                 ->waitUntilNetworkIdle()
                 ->setDelay(1500)
-                ->screenshot('jpeg', 95);
-
-            // Convert screenshot to PDF (embeds image in A4 PDF, same as frontend jsPDF)
-            $pdfData = ScreenshotToPdf::convert($jpegData);
+                ->format('A4')
+                ->pdf();
 
             Mail::to($schedule->recipient_email)->send(
                 new InvoiceMail($invoice, $pdfData, null, 'image/png')
